@@ -7,6 +7,9 @@ import (
 // ErrorFunc represents an error-returning function.
 type ErrorFunc func() error
 
+// ErrorFuncMap transforms an ErrorFunc into another ErrorFunc.
+type ErrorFuncMap func(ErrorFunc) ErrorFunc
+
 // RetryIndexErrorFunc represents an error-returning function that also tracks
 // the current retry index.
 type RetryIndexErrorFunc func(uint) error
@@ -46,9 +49,9 @@ func Retry(retryCount uint) func(ErrorFunc) ErrorFunc {
 	}
 }
 
-// DelayRetry composes a function with retry-delaying capabilities. The output
+// delayRetry composes a function with retry-delaying capabilities. The output
 // of the return function can be fed to a CountRetry composition.
-func DelayRetry(d time.Duration) func(ErrorFunc) RetryIndexErrorFunc {
+func delayRetry(d time.Duration) func(ErrorFunc) RetryIndexErrorFunc {
 	return func(f ErrorFunc) RetryIndexErrorFunc {
 		return func(retry uint) error {
 			if retry > 0 {
@@ -60,11 +63,22 @@ func DelayRetry(d time.Duration) func(ErrorFunc) RetryIndexErrorFunc {
 	}
 }
 
-// RetryWithDelay composes retry with delay capabilities.
-func RetryWithDelay(retryCount uint) func(time.Duration) func(ErrorFunc) ErrorFunc {
-	return func(delay time.Duration) func(ErrorFunc) ErrorFunc {
+// DelayRetry composes retry with delay capabilities.
+func DelayRetry(retryCount uint) func(time.Duration) ErrorFuncMap {
+	return func(delay time.Duration) ErrorFuncMap {
 		return func(f ErrorFunc) ErrorFunc {
-			return CountRetry(retryCount)(DelayRetry(delay)(f))
+			return CountRetry(retryCount)(delayRetry(delay)(f))
+		}
+	}
+}
+
+// PublishError publishes an error for side effects.
+func PublishError(callback func(error)) ErrorFuncMap {
+	return func(f ErrorFunc) ErrorFunc {
+		return func() error {
+			err := f()
+			callback(err)
+			return err
 		}
 	}
 }
