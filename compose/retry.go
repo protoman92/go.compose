@@ -1,49 +1,55 @@
 package compose
 
-import (
-	"time"
-)
+import "time"
 
-// CountRetry composes an error function with retry capabilities. The error
-// function has access to the current retry count in its first parameter, which
-// is useful e.g when we are implementing a delay mechanism.
-func CountRetry(retryCount uint) func(func(uint) error) ErrorF {
-	return func(f func(uint) error) ErrorF {
-		var retryF func(uint) error
+// CountRetryF composes a Function with retry capabilities. The error function
+// has access to the current retry count in its first parameter, which is
+// useful e.g when we are implementing a delay mechanism.
+func CountRetryF(retryCount uint) func(func(uint) (interface{}, error)) Function {
+	return func(f func(uint) (interface{}, error)) Function {
+		var retryF func(uint) (interface{}, error)
 
-		retryF = func(current uint) error {
-			if err := f(current); err != nil {
+		retryF = func(current uint) (interface{}, error) {
+			value, err := f(current)
+
+			if err != nil {
 				if current < retryCount {
 					return retryF(current + 1)
 				}
 
-				return err
+				return nil, err
 			}
 
-			return nil
+			return value, nil
 		}
 
-		return func() error {
+		return func() (interface{}, error) {
 			return retryF(0)
 		}
 	}
 }
 
-// Retry has the same semantics as CountRetry, but ignores the current retry
+// RetryF has the same semantics as CountRetry, but ignores the current retry
 // count.
-func Retry(retryCount uint) func(ErrorF) ErrorF {
-	return func(f ErrorF) ErrorF {
-		return CountRetry(retryCount)(func(retry uint) error {
+func RetryF(retryCount uint) FunctionF {
+	return func(f Function) Function {
+		return CountRetryF(retryCount)(func(retry uint) (interface{}, error) {
 			return f()
 		})
 	}
 }
 
+// Retry is a convenience method to chain Function, using the compose RetryF
+// function under the hood.
+func (f Function) Retry(retryCount uint) Function {
+	return RetryF(retryCount).Wrap(f)
+}
+
 // delayRetry composes a function with retry-delaying capabilities. The output
 // of the return function can be fed to a CountRetry composition.
-func delayRetry(d time.Duration) func(ErrorF) func(uint) error {
-	return func(f ErrorF) func(uint) error {
-		return func(retry uint) error {
+func delayRetry(d time.Duration) func(Function) func(uint) (interface{}, error) {
+	return func(f Function) func(uint) (interface{}, error) {
+		return func(retry uint) (interface{}, error) {
 			if retry > 0 {
 				time.Sleep(d)
 			}
@@ -53,11 +59,19 @@ func delayRetry(d time.Duration) func(ErrorF) func(uint) error {
 	}
 }
 
-// DelayRetry composes retry with delay capabilities.
-func DelayRetry(retryCount uint) func(time.Duration) ErrorFF {
-	return func(delay time.Duration) ErrorFF {
-		return func(f ErrorF) ErrorF {
-			return CountRetry(retryCount)(delayRetry(delay)(f))
+// DelayRetryF composes retry with delay capabilities.
+func DelayRetryF(retryCount uint) func(time.Duration) FunctionF {
+	return func(delay time.Duration) FunctionF {
+		return func(f Function) Function {
+			return CountRetryF(retryCount)(delayRetry(delay)(f))
 		}
+	}
+}
+
+// DelayRetry is a convenience function that calls the composable DelayRetryF
+// function under the hood.
+func (f Function) DelayRetry(retryCount uint) func(time.Duration) Function {
+	return func(d time.Duration) Function {
+		return DelayRetryF(retryCount)(d).Wrap(f)
 	}
 }

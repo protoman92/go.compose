@@ -7,18 +7,18 @@ import (
 func TestCompose(t *testing.T) {
 	published := 0
 
-	var retryF ErrorFF = Retry(retryCount)
+	retryF := RetryF(retryCount)
 
-	publishF := PublishError(func(err error) {
+	publishF := PublishF(func(value interface{}, err error) {
 		published++
 	})
 
-	errF := func() error {
-		return err
+	errF := func() (interface{}, error) {
+		return valueOp, errOp
 	}
 
 	/// When && Then 1
-	retryF.Compose(publishF).Compose(NoopError())(errF)()
+	retryF.Compose(publishF).ComposeFn(NoopF)(errF)()
 
 	if uint(published) != retryCount+1 {
 		t.Errorf("Expected %d, got %d", retryCount+1, published)
@@ -26,7 +26,7 @@ func TestCompose(t *testing.T) {
 
 	/// When && Then 2
 	published = 0
-	publishF.Compose(retryF).Compose(NoopError())(errF)()
+	publishF.Compose(retryF).ComposeFn(NoopF)(errF)()
 
 	if published != 1 {
 		t.Errorf("Expected %d, got %d", 1, published)
@@ -34,12 +34,12 @@ func TestCompose(t *testing.T) {
 }
 
 func BenchmarkComposition(b *testing.B) {
-	errF := func() error {
-		return err
+	errF := func() (interface{}, error) {
+		return valueOp, errOp
 	}
 
-	publishF := func(err error) {}
-	composeF := PublishError(publishF)
+	publishF := func(value interface{}, err error) {}
+	composeF := PublishF(publishF)
 
 	composed := composeF.
 		Compose(composeF).
@@ -53,8 +53,8 @@ func BenchmarkComposition(b *testing.B) {
 }
 
 func BenchmarkOrdinaryErrorF(b *testing.B) {
-	errF := func() error {
-		return err
+	errF := func() (interface{}, error) {
+		return valueOp, errOp
 	}
 
 	for i := 0; i < b.N; i++ {
