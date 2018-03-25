@@ -7,7 +7,7 @@ import (
 func TestCompose(t *testing.T) {
 	published := 0
 
-	retryF := RetryF(retryCount)
+	retryF := RetryF(retries)
 
 	publishF := PublishF(func(value interface{}, err error) {
 		published++
@@ -20,8 +20,8 @@ func TestCompose(t *testing.T) {
 	/// When && Then 1
 	retryF.Compose(publishF).ComposeFn(NoopF)(errF)()
 
-	if uint(published) != retryCount+1 {
-		t.Errorf("Expected %d, got %d", retryCount+1, published)
+	if uint(published) != retries+1 {
+		t.Errorf("Expected %d, got %d", retries+1, published)
 	}
 
 	/// When && Then 2
@@ -30,6 +30,20 @@ func TestCompose(t *testing.T) {
 
 	if published != 1 {
 		t.Errorf("Expected %d, got %d", 1, published)
+	}
+}
+
+func TestComposeConvertToErrorFuncF(t *testing.T) {
+	/// Setup
+	errF := func() error {
+		return errOp
+	}
+
+	retryF := RetryF(retries).ErrorFuncF()
+
+	/// When & Then
+	if err := retryF.Wrap(errF).Invoke(); err != errOp {
+		t.Errorf("Expected %v, got %v", errOp, err)
 	}
 }
 

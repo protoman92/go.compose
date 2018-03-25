@@ -1,8 +1,8 @@
 package compose
 
-// PublishF publishes the result of a Function for side effects.
-func PublishF(callback func(interface{}, error)) FunctionF {
-	return func(f Function) Function {
+// PublishF publishes the result of a Func for side effects.
+func PublishF(callback func(interface{}, error)) FuncF {
+	return func(f Func) Func {
 		return func() (interface{}, error) {
 			value, err := f()
 			callback(value, err)
@@ -13,6 +13,6 @@ func PublishF(callback func(interface{}, error)) FunctionF {
 
 // Publish is a convenience function that calls the composable PublishF under
 // the hood.
-func (f Function) Publish(callback func(interface{}, error)) Function {
+func (f Func) Publish(callback func(interface{}, error)) Func {
 	return PublishF(callback).Wrap(f)
 }

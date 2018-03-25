@@ -10,7 +10,7 @@ func TestPublish(t *testing.T) {
 	var publishedValue interface{}
 	var publishedErr error
 
-	var errF Function = func() (interface{}, error) {
+	var errF Func = func() (interface{}, error) {
 		return valueOp, errOp
 	}
 
@@ -21,7 +21,7 @@ func TestPublish(t *testing.T) {
 	}
 
 	/// When & Then
-	value, err := errF.Publish(publishF).Retry(retryCount).Invoke()
+	value, err := errF.Publish(publishF).Retry(retries).Invoke()
 
 	if err != errOp || value != nil {
 		t.Errorf("Expected %v, got %v", errOp, err)
@@ -35,7 +35,7 @@ func TestPublish(t *testing.T) {
 		t.Errorf("Expected %v, got %v", errOp, publishedErr)
 	}
 
-	if uint(published) != retryCount+1 {
-		t.Errorf("Expected %v, got %v", retryCount+1, published)
+	if uint(published) != retries+1 {
+		t.Errorf("Expected %v, got %v", retries+1, published)
 	}
 }

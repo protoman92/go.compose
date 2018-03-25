@@ -6,8 +6,8 @@ import (
 )
 
 const (
-	delayTime  = time.Duration(1e8)
-	retryCount = uint(10)
+	delay   = time.Duration(1e8)
+	retries = uint(10)
 
 	// This value should be returned by test Functions.
 	valueOp = 1

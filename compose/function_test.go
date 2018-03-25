@@ -2,14 +2,14 @@ package compose
 
 import "testing"
 
-func TestNoop(t *testing.T) {
+func TestConvertToErrorFunc(t *testing.T) {
 	/// Setup
 	var errF Func = func() (interface{}, error) {
 		return valueOp, errOp
 	}
 
 	/// When & Then
-	if _, err := errF.Noop().Invoke(); err != errOp {
+	if err := errF.ErrorFunc().Invoke(); err != errOp {
 		t.Errorf("Expected %v, got %v", errOp, err)
 	}
 }

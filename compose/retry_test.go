@@ -15,12 +15,12 @@ func TestCountRetryCompose(t *testing.T) {
 	}
 
 	/// When & Then
-	if _, err := CountRetryF(retryCount)(errF)(); err != errOp {
+	if _, err := CountRetryF(retries)(errF)(); err != errOp {
 		t.Errorf("Expected %v, got %v", errOp, err)
 	}
 
-	if currentRetry != retryCount {
-		t.Errorf("Expected %v, got %v", retryCount, currentRetry)
+	if currentRetry != retries {
+		t.Errorf("Expected %v, got %v", retries, currentRetry)
 	}
 }
 
@@ -41,7 +41,7 @@ func TestRetryComposeWithInitialError(t *testing.T) {
 	}
 
 	/// When & Then
-	if value, err := RetryF(retryCount)(errF)(); err != nil || value != valueOp {
+	if value, err := RetryF(retries)(errF)(); err != nil || value != valueOp {
 		t.Errorf("Should not error, but got %v", err)
 	}
 
@@ -54,18 +54,18 @@ func TestRetryComposeWithAllErrors(t *testing.T) {
 	/// Setup
 	invoked := uint(0)
 
-	var errF Function = func() (interface{}, error) {
+	var errF Func = func() (interface{}, error) {
 		invoked++
 		return valueOp, errOp
 	}
 
 	/// When & Then
-	if _, err := errF.Retry(retryCount).Invoke(); err != errOp {
+	if _, err := errF.Retry(retries).Invoke(); err != errOp {
 		t.Errorf("Expected %v, got %v", errOp, err)
 	}
 
-	if invoked != retryCount+1 {
-		t.Errorf("Expected %d, got %d", retryCount+1, invoked)
+	if invoked != retries+1 {
+		t.Errorf("Expected %d, got %d", retries+1, invoked)
 	}
 }
 
@@ -80,14 +80,14 @@ func TestDelayRetry(t *testing.T) {
 	/// When & Then
 	start := time.Now()
 
-	if _, err := delayRetry(delayTime)(errF)(currentRetry); err != errOp {
+	if _, err := delayRetry(delay)(errF)(currentRetry); err != errOp {
 		t.Errorf("Expected %v, got %v", errOp, err)
 	}
 
 	difference := time.Now().Sub(start)
 
-	if difference < delayTime {
-		t.Errorf("Expected %d, got %d", delayTime, difference)
+	if difference < delay {
+		t.Errorf("Expected %d, got %d", delay, difference)
 	}
 }
 
@@ -100,33 +100,33 @@ func TestDelayRetryForFirstInvocation(t *testing.T) {
 	/// When & Then
 	start := time.Now()
 
-	if _, err := delayRetry(delayTime)(errF)(0); err != errOp {
+	if _, err := delayRetry(delay)(errF)(0); err != errOp {
 		t.Errorf("Expected %v, got %v", errOp, err)
 	}
 
 	difference := time.Now().Sub(start)
 
-	if difference >= delayTime {
+	if difference >= delay {
 		t.Errorf("Should not have delayed, but got %d", difference)
 	}
 }
 
 func TestDelayedRetry(t *testing.T) {
 	/// Setup
-	var errF Function = func() (interface{}, error) {
+	var errF Func = func() (interface{}, error) {
 		return valueOp, errOp
 	}
 
 	/// When & Then
 	start := time.Now()
 
-	if _, err := errF.DelayRetry(retryCount)(delayTime).Invoke(); err != errOp {
+	if _, err := errF.DelayRetry(retries)(delay).Invoke(); err != errOp {
 		t.Errorf("Expected %v, got %v", errOp, err)
 	}
 
 	difference := time.Now().Sub(start)
 
-	if int64(difference) < int64(delayTime)*int64(retryCount) {
+	if int64(difference) < int64(delay)*int64(retries) {
 		t.Errorf("Wrong delay duration %d", difference)
 	}
 }
