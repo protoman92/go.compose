@@ -3,8 +3,8 @@ package compose
 // PublishF publishes the result of a Func for side effects.
 func PublishF(callback func(interface{}, error)) FuncF {
 	return func(f Func) Func {
-		return func() (interface{}, error) {
-			value, err := f()
+		return func(value interface{}) (interface{}, error) {
+			value, err := f(value)
 			callback(value, err)
 			return value, err
 		}

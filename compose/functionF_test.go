@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestCompose(t *testing.T) {
+func TestComposeFuncF(t *testing.T) {
 	published := 0
 
 	retryF := RetryF(retries)
@@ -18,7 +18,7 @@ func TestCompose(t *testing.T) {
 	}
 
 	/// When && Then 1
-	retryF.Compose(publishF).ComposeFn(NoopF)(errF)()
+	retryF.Compose(publishF).Compose(NoopF()).ToSupplyFuncF().Wrap(errF).Invoke()
 
 	if uint(published) != retries+1 {
 		t.Errorf("Expected %d, got %d", retries+1, published)
@@ -26,29 +26,30 @@ func TestCompose(t *testing.T) {
 
 	/// When && Then 2
 	published = 0
-	publishF.Compose(retryF).ComposeFn(NoopF)(errF)()
+
+	publishF.Compose(retryF).Compose(NoopF()).ToSupplyFuncF().Wrap(errF).Invoke()
 
 	if published != 1 {
 		t.Errorf("Expected %d, got %d", 1, published)
 	}
 }
 
-func TestComposeConvertToErrorFuncF(t *testing.T) {
+func TestComposeConvertToCallbackFuncF(t *testing.T) {
 	/// Setup
-	errF := func() error {
+	errF := func(value interface{}) error {
 		return errOp
 	}
 
-	retryF := RetryF(retries).ErrorFuncF()
+	retryF := RetryF(retries).ToCallbackFuncF()
 
 	/// When & Then
-	if err := retryF.Wrap(errF).Invoke(); err != errOp {
+	if err := retryF.Wrap(errF).Invoke(nil); err != errOp {
 		t.Errorf("Expected %v, got %v", errOp, err)
 	}
 }
 
 func BenchmarkComposition(b *testing.B) {
-	errF := func() (interface{}, error) {
+	errF := func(value interface{}) (interface{}, error) {
 		return valueOp, errOp
 	}
 
@@ -62,7 +63,7 @@ func BenchmarkComposition(b *testing.B) {
 		Compose(composeF)(errF)
 
 	for i := 0; i < b.N; i++ {
-		composed()
+		composed(nil)
 	}
 }
 

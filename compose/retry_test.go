@@ -9,13 +9,13 @@ func TestCountRetryCompose(t *testing.T) {
 	/// Setup
 	var currentRetry uint
 
-	errF := func(retry uint) (interface{}, error) {
+	errF := func(retry uint, value interface{}) (interface{}, error) {
 		currentRetry = retry
 		return valueOp, errOp
 	}
 
 	/// When & Then
-	if _, err := CountRetryF(retries)(errF)(); err != errOp {
+	if _, err := CountRetryF(retries)(errF).ToSupplyFunc().Invoke(); err != errOp {
 		t.Errorf("Expected %v, got %v", errOp, err)
 	}
 
@@ -28,7 +28,7 @@ func TestRetryComposeWithInitialError(t *testing.T) {
 	/// Setup
 	invoked := uint(0)
 
-	errF := func() (interface{}, error) {
+	errF := func(value interface{}) (interface{}, error) {
 		defer func() {
 			invoked++
 		}()
@@ -41,7 +41,9 @@ func TestRetryComposeWithInitialError(t *testing.T) {
 	}
 
 	/// When & Then
-	if value, err := RetryF(retries)(errF)(); err != nil || value != valueOp {
+	value, err := RetryF(retries)(errF).ToSupplyFunc().Invoke()
+
+	if err != nil || value != valueOp {
 		t.Errorf("Should not error, but got %v", err)
 	}
 
@@ -54,13 +56,13 @@ func TestRetryComposeWithAllErrors(t *testing.T) {
 	/// Setup
 	invoked := uint(0)
 
-	var errF Func = func() (interface{}, error) {
+	var errF Func = func(value interface{}) (interface{}, error) {
 		invoked++
 		return valueOp, errOp
 	}
 
 	/// When & Then
-	if _, err := errF.Retry(retries).Invoke(); err != errOp {
+	if _, err := errF.Retry(retries).ToSupplyFunc().Invoke(); err != errOp {
 		t.Errorf("Expected %v, got %v", errOp, err)
 	}
 
@@ -73,14 +75,14 @@ func TestDelayRetry(t *testing.T) {
 	/// Setup
 	currentRetry := uint(2)
 
-	errF := func() (interface{}, error) {
+	errF := func(value interface{}) (interface{}, error) {
 		return valueOp, errOp
 	}
 
 	/// When & Then
 	start := time.Now()
 
-	if _, err := delayRetry(delay)(errF)(currentRetry); err != errOp {
+	if _, err := delayRetry(delay)(errF)(currentRetry, nil); err != errOp {
 		t.Errorf("Expected %v, got %v", errOp, err)
 	}
 
@@ -93,14 +95,14 @@ func TestDelayRetry(t *testing.T) {
 
 func TestDelayRetryForFirstInvocation(t *testing.T) {
 	/// Setup
-	errF := func() (interface{}, error) {
+	errF := func(value interface{}) (interface{}, error) {
 		return valueOp, errOp
 	}
 
 	/// When & Then
 	start := time.Now()
 
-	if _, err := delayRetry(delay)(errF)(0); err != errOp {
+	if _, err := delayRetry(delay)(errF)(0, nil); err != errOp {
 		t.Errorf("Expected %v, got %v", errOp, err)
 	}
 
@@ -113,14 +115,16 @@ func TestDelayRetryForFirstInvocation(t *testing.T) {
 
 func TestDelayedRetry(t *testing.T) {
 	/// Setup
-	var errF Func = func() (interface{}, error) {
+	var errF Func = func(value interface{}) (interface{}, error) {
 		return valueOp, errOp
 	}
 
 	/// When & Then
 	start := time.Now()
 
-	if _, err := errF.DelayRetry(retries)(delay).Invoke(); err != errOp {
+	_, err := errF.DelayRetry(retries)(delay).ToSupplyFunc().Invoke()
+
+	if err != errOp {
 		t.Errorf("Expected %v, got %v", errOp, err)
 	}
 
